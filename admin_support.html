@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KPK-WIN | Admin Support</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 10px; margin: 0; }
+        .admin-header { color: #ff9900; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; border-bottom: 2px solid #ff9900; display: inline-block; width: 100%; padding-bottom: 10px; }
+        
+        .user-card { 
+            background: #0d0d0d; 
+            border: 1px solid #ff9900; 
+            border-radius: 15px; 
+            padding: 20px; 
+            margin: 15px auto;
+            width: 95%; /* Size barha diya gaya hai */
+            box-sizing: border-box;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.9);
+        }
+
+        .card-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px;
+        }
+
+        .user-name { color: #ff9900; font-size: 20px; font-weight: bold; margin: 0; }
+        
+        .delete-btn { 
+            background: #ff0000; 
+            color: #fff; 
+            border: none; 
+            padding: 8px 15px; 
+            border-radius: 5px; 
+            font-size: 14px; 
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .msg-list { 
+            max-height: 400px; 
+            overflow-y: auto; 
+            background: #000; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 20px;
+            border: 1px solid #222;
+        }
+
+        .u-msg { 
+            color: #ffffff; /* White text for better visibility */
+            font-size: 16px; /* Font size barha diya */
+            margin-bottom: 12px; 
+            padding-bottom: 8px;
+            border-bottom: 1px solid #1a1a1a;
+            line-height: 1.4;
+        }
+        .u-msg b { color: #ff9900; margin-right: 5px; }
+
+        .reply-box { display: flex; flex-direction: column; gap: 10px; }
+        
+        input { 
+            width: 100%; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid #444; 
+            background: #1a1a1a; 
+            color: #fff; 
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .send-btn { 
+            background: #ff9900; 
+            color: #000; 
+            border: none; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .back-btn { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<button class="back-btn" onclick="window.location.href='admin.html'">← Back</button>
+<div class="admin-header">KPK-WIN SUPPORT</div>
+
+<div id="usersContainer">Loading chats...</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCYzGgpU8OBX2rQXkqVrafgtfMK896zJtA", 
+        databaseURL: "https://kpk-win-default-rtdb.firebaseio.com", 
+        projectId: "kpk-win"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const db = firebase.database();
+
+    db.ref("SupportMessages").on("value", (snapshot) => {
+        const container = document.getElementById("usersContainer");
+        container.innerHTML = "";
+        
+        if(!snapshot.exists()) { 
+            container.innerHTML = "<p style='text-align:center; font-size:18px;'>No Messages Found.</p>"; 
+            return; 
+        }
+
+        snapshot.forEach((userSnap) => {
+            const uName = userSnap.key;
+            const card = document.createElement("div");
+            card.className = "user-card";
+            
+            let messagesHtml = "";
+            userSnap.forEach((msgSnap) => {
+                const data = msgSnap.val();
+                messagesHtml += `<div class="u-msg"><b>${data.time || ''}</b><br>${data.message}</div>`;
+            });
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <p class="user-name">User: ${uName}</p>
+                    <button class="delete-btn" onclick="deleteChat('${uName}')">DELETE</button>
+                </div>
+                <div class="msg-list">${messagesHtml}</div>
+                <div class="reply-box">
+                    <input type="text" id="reply_${uName}" placeholder="Write message for ${uName}...">
+                    <button class="send-btn" onclick="sendReply('${uName}')">SEND REPLY</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    });
+
+    function deleteChat(uName) {
+        if(confirm("Pura chat delete kar dein?")) {
+            db.ref("SupportMessages/" + uName).remove()
+            .then(() => { alert("Deleted!"); });
+        }
+    }
+
+    function sendReply(uName) {
+        const msgInput = document.getElementById("reply_" + uName);
+        const msgText = msgInput.value;
+        if(msgText.trim() == "") return;
+
+        db.ref("SupportReplies/" + uName).push({
+            message: msgText,
+            sender: "Admin",
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        }).then(() => {
+            msgInput.value = "";
+            alert("Reply sent!");
+        });
+    }
+</script>
+</body>
+</html>
