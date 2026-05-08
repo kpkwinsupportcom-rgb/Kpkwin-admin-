@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KPK-WIN | Admin Control</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { background: #040f0c; color: white; font-family: sans-serif; padding: 20px; }
+        .user-card { background: #0f1c18; border: 1px solid #ff9900; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .msg-list { max-height: 250px; overflow-y: auto; background: #071511; padding: 15px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #163026; }
+        .u-msg { color: #ff9900; margin-bottom: 8px; font-size: 14px; border-bottom: 1px solid #1a2e28; padding-bottom: 4px; }
+        .admin-reply { color: #25d366; margin-bottom: 8px; font-size: 14px; text-align: right; }
+        input { width: 75%; padding: 12px; border-radius: 8px; border: 1px solid #1f332c; background: #071511; color: white; outline: none; }
+        button { background: #ff9900; padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: black; }
+        .back-btn { background: #444; color: white; margin-bottom: 20px; padding: 8px 15px; font-size: 12px; }
+        h3 { margin-top: 0; color: #ff9900; border-bottom: 1px solid #ff9900; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+<button class="back-btn" onclick="window.location.href='admin.html'">← Back to Dashboard</button>
+<h2 style="color:#ff9900; text-align:center; letter-spacing: 2px;">KPK-WIN ADMIN SUPPORT PANEL</h2>
+<div id="usersContainer" style="max-width: 800px; margin: auto;">Loading active chats...</div>
+
+<script>
+    // Sahi Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCYzGgpU8OBX2rQXkqVrafgtfMK896zJtA", 
+        databaseURL: "https://kpk-win-default-rtdb.firebaseio.com", 
+        projectId: "kpk-win"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const db = firebase.database();
+
+    // Messages load karne ka logic
+    db.ref("SupportMessages").on("value", (snapshot) => {
+        const container = document.getElementById("usersContainer");
+        container.innerHTML = "";
+        
+        if(!snapshot.exists()) { container.innerHTML = "<p style='text-align:center;'>Abhi koi naya message nahi hai.</p>"; return; }
+
+        snapshot.forEach((userSnap) => {
+            const uName = userSnap.key;
+            const card = document.createElement("div");
+            card.className = "user-card";
+            card.innerHTML = `<h3>User: ${uName}</h3><div class="msg-list" id="list_${uName}"></div>`;
+            
+            userSnap.forEach((msgSnap) => {
+                const data = msgSnap.val();
+                card.querySelector(".msg-list").innerHTML += `<div class="u-msg"><b>${data.time || ''}:</b> ${data.message}</div>`;
+            });
+
+            card.innerHTML += `
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="reply_${uName}" placeholder="Type reply to ${uName}...">
+                    <button onclick="sendReply('${uName}')">SEND</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    });
+
+    function sendReply(uName) {
+        const msgInput = document.getElementById("reply_" + uName);
+        const msgText = msgInput.value;
+        if(msgText.trim() == "") return;
+
+        // Admin ka reply "SupportReplies" mein jayega
+        db.ref("SupportReplies/" + uName).push({
+            message: msgText,
+            sender: "Admin",
+            time: new Date().toLocaleTimeString()
+        }).then(() => {
+            msgInput.value = "";
+            alert("Reply sent to " + uName);
+        });
+    }
+</script>
+</body>
+</html>
